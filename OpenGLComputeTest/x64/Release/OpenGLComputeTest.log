@@ -1,0 +1,15 @@
+﻿  main.cpp
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(43,22): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(152,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(166,99): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(169,94): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(188,98): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(204,108): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\Peggers\source\repos\OpenGLComputeTest\OpenGLComputeTest\main.cpp(220,93): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+LINK : warning LNK4098: defaultlib 'MSVCRTD' conflicts with use of other libs; use /NODEFAULTLIB:library
+  Generating code
+  0 of 1573 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  OpenGLComputeTest.vcxproj -> C:\Users\Peggers\source\repos\OpenGLComputeTest\x64\Release\OpenGLComputeTest.exe
