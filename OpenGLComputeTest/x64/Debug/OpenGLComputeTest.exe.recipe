@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\UniStuff\Year4\CMP400 - HonoursProject\FeasibilityDemoStuff\OtherArtefacts\ExampleCode\ComputeShaderTest\FullSolution\x64\Debug\OpenGLComputeTest.exe</FullPath>
+      <FullPath>C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\x64\Debug\OpenGLComputeTest.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

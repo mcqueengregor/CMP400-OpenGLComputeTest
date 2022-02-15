@@ -21,9 +21,8 @@ public:
 		glBindVertexArray(m_handle);
 
 		// Create temporary VBO handle and generate + populate buffer:
-		unsigned int tempVBOHandle;
-		glGenBuffers(1, &tempVBOHandle);
-		glBindBuffer(GL_ARRAY_BUFFER, tempVBOHandle);
+		glGenBuffers(1, &m_VBOhandle);
+		glBindBuffer(GL_ARRAY_BUFFER, m_VBOhandle);
 		glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
 
 		switch (format)

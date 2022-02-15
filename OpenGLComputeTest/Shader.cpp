@@ -37,7 +37,7 @@ void Shader::loadShader(const char* computePath)
 		std::cout << "SHADER PROGRAM LINKING ERROR:\n" << infoLog << std::endl;
 	}
 	else
-		std::cout << "Shader program compilation complete!" << std::endl;
+		std::cout << "Compute shader program compilation complete!" << std::endl;
 
 	glDeleteShader(c);
 }
@@ -64,7 +64,7 @@ void Shader::loadShader(const char* vertexPath, const char* fragmentPath)
 		std::cout << "SHADER PROGRAM LINKING ERROR:\n" << infoLog << std::endl;
 	}
 	else
-		std::cout << "Shader program compilation complete!" << std::endl;
+		std::cout << "Vertex and fragment shader program compilation complete!" << std::endl;
 
 	// Delete unneeded shader files:
 	glDeleteShader(v);
@@ -95,7 +95,7 @@ void Shader::loadShader(const char* vertexPath, const char* fragmentPath, const 
 		std::cout << "SHADER PROGRAM LINKING ERROR:\n" << infoLog << std::endl;
 	}
 	else
-		std::cout << "Shader program compilation complete!" << std::endl;
+		std::cout << "Vertex, fragment and geometry shader program compilation complete!" << std::endl;
 
 	// Delete unneeded shader files:
 	glDeleteShader(v);

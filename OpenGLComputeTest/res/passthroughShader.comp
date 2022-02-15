@@ -1,0 +1,73 @@
+#version 430 core
+layout (local_size_x = 1024, local_size_y = 1) in;
+layout (rgba32f, binding = 3) uniform image2D inputImg;
+
+uniform vec3 u_colour;
+uniform float u_scalar;
+uniform float u_gParam;
+
+uniform float u_distance;
+uniform float u_constant;
+uniform float u_linear;
+uniform float u_quadratic;
+
+#define PI 3.141592653589793238462643383279
+
+float phaseHG(float theta, float g)
+{
+	return 1 / (4 * PI) * ((1 - g * g) / pow(1 + g * g - 2 * g * theta, 3 / 2));
+}
+
+float getLightAttenuation(float dist)
+{
+	return 1.0 / (u_constant + u_linear * dist + u_quadratic * (dist * dist));
+}
+
+void main()
+{
+	const ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+
+	/*
+		LUT process (based on Hoobler's LUT):
+
+		- Each thread needs to evaluate HG phase function using global ID to determine input parameters.
+		- Parameters for HG are view vector and light vector, mapping for LUT are as follows:
+
+
+											 length(camPos, lightPos)
+										 _________________________________
+										|								  |
+										|								  |
+										|								  |
+										|								  |
+										|								  |
+		acos(dot(viewVec, lightVec)		|								  |
+										|								  |
+										|								  |
+										|								  |
+										|								  |
+										|_________________________________|
+	
+		- When mapping values to the LUT, the global ID is used to determine where in the range of possible values this pixel falls. The 
+		  values are found with:
+			- acos(dot()) = acos(global_ID.y / imageSize.y) / 180, converted to range [+/-1] rather than [0,1].
+			- length()	= Phong attenuation over distance?
+
+			- Might just figure out HG results over the y-axis first.
+			- Once that's done, do Phong diffuse lighting stuff with attenuation over the x-axis:
+				- Calculate attenuation over an increasing distance, output grayscale colour.
+				- Value at current pixel is attenuation, where the distance used in calculations is u_distance * (global_ID.x / width).
+
+	*/
+
+	const vec2 dim = vec2(1024);
+	const float theta = (coords.y / dim.y) * 2.0 - 1;
+	const float dist = u_distance * ((dim.x - gl_GlobalInvocationID.x) / dim.x);
+
+	const float phase = phaseHG(theta, u_gParam);
+	const float att = getLightAttenuation(dist);
+
+	const vec4 colour = vec4(vec3(phase * att * u_scalar), 1.0);
+
+	imageStore(inputImg, coords, colour);
+}

@@ -1,0 +1,38 @@
+#version 430 core
+layout (local_size_x = 1024, local_size_y = 1) in;
+layout (rgba32f, binding = 6) uniform image2D finalLUT;
+
+#define PI 3.141592653589793238462643383279
+
+uniform float u_gParam;
+
+uniform float u_constant;
+uniform float u_linear;
+uniform float u_quadratic;
+
+float PhongAttenuation(float dist)
+{
+	return 1.0 / (u_constant + u_linear * dist + u_quadratic * (dist * dist));
+}
+
+float PhaseHG(float theta, float g)
+{
+	return 1 / (4 * PI) * ((1 - g * g) / pow(1 + g * g - 2 * g * theta, 3 / 2));
+}
+
+void main()
+{
+	const vec2 dim = imageSize(finalLUT);
+	const ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+
+	const vec2 centre = dim / 2.0;
+	vec2 dir = coords - centre;
+
+	float dist = length(dir);
+	dist /= 25.0;
+	float att = PhongAttenuation(dist);
+
+	float phase = PhaseHG(dot(normalize(dir), vec2(0.0, 1.0)), u_gParam); 
+
+	imageStore(finalLUT, coords, vec4(vec3(phase + att, 0.0, 0.0), 1.0));
+}

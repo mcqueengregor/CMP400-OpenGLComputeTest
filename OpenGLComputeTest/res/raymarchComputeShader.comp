@@ -1,5 +1,5 @@
 #version 430
-layout (local_size_x = 1280, local_size_y = 1) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
 #define MAX_DIST 50
@@ -117,7 +117,7 @@ float GetLight(vec3 p)
     vec3 l = normalize(lightPos - p);
     vec3 n = GetNormal(p);
     
-    float diff = clamp(dot(l, n), 0., 1.);
+    float diff = clamp(dot(l, n), 0.0, 1.0);
     
     // Perform second raymarch from point to light position:
     Ray pointToLight;

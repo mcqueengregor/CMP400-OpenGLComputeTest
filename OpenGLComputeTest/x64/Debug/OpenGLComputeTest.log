@@ -1,1 +1,9 @@
-﻿  OpenGLComputeTest.vcxproj -> C:\UniStuff\Year4\CMP400 - HonoursProject\FeasibilityDemoStuff\OtherArtefacts\ExampleCode\ComputeShaderTest\FullSolution\x64\Debug\OpenGLComputeTest.exe
+﻿  main.cpp
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(43,22): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(200,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(214,99): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(217,94): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(236,98): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(299,108): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\OpenGLComputeTest\main.cpp(315,93): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+  OpenGLComputeTest.vcxproj -> C:\UniStuff\Year4\CMP400 - HonoursProject\CMP400-OpenGLComputeTest\x64\Debug\OpenGLComputeTest.exe
