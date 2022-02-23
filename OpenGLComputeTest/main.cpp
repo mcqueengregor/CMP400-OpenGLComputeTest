@@ -114,7 +114,7 @@ int main()
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, WIDTH, HEIGHT, DEPTH, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB32F, WIDTH, HEIGHT, DEPTH, 0, GL_RGB, GL_FLOAT, NULL);
 
 	GLuint lutTex;
 	glGenTextures(1, &lutTex);
@@ -269,7 +269,7 @@ int main()
 				glBindImageTexture(3, scatterAccumTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 				glBindImageTexture(4, lutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 				glBindImageTexture(5, summedLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				glDispatchCompute(1, HEIGHT, 1);
+				//glDispatchCompute(1, HEIGHT, 1);
 
 				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -289,7 +289,7 @@ int main()
 				kovalovsLutShader.setFloat("u_quadratic", g_quadratic);
 
 				glBindImageTexture(6, lutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				//glDispatchCompute(1, HEIGHT, 1);
+				glDispatchCompute(1, HEIGHT, 1);
 			}
 
 			// Block until compute operations have been completed:
