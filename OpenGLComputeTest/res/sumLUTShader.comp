@@ -16,7 +16,7 @@ void main()
     
     for (uint t = 0; t < dim.x; ++t)
     {
-        ivec2 tc = localCoords + ivec2(t, 0);
+        ivec2 texCoords = localCoords + ivec2(t, 0);
         vec4 s = imageLoad(finalLUT, tc);
 
         vec3 v = vec3(s.rgb * s.a) /* + sOffset */;
@@ -24,6 +24,6 @@ void main()
             sOffset = v;
 
         s.a *= dim.y / 32;
-        imageStore(summedLUT, tc, vec4(v / s.a, s.a));
+        imageStore(summedLUT, texCoords, vec4(v / s.a, s.a));
     }
 }

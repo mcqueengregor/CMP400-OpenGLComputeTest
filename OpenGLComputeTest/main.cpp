@@ -62,6 +62,7 @@ float g_linear		= 0.09f;
 float g_quadratic	= 0.032f;
 
 bool g_raymarchOrNoise = false;	// 'false' = raymarching, 'true' = 3D noise.
+bool g_KorH = false;			// 'false' = output Kovalovs' LUT, 'true' = output Hoobler's LUT.
 
 const int WIDTH = 1024, HEIGHT = 1024, DEPTH = 50;
 
@@ -116,15 +117,27 @@ int main()
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB32F, WIDTH, HEIGHT, DEPTH, 0, GL_RGB, GL_FLOAT, NULL);
 
-	GLuint lutTex;
-	glGenTextures(1, &lutTex);
-	glBindTexture(GL_TEXTURE_2D, lutTex);
+	// Final output of Hoobler's LUT calculations:
+	GLuint hooblerLutTex;
+	glGenTextures(1, &hooblerLutTex);
+	glBindTexture(GL_TEXTURE_2D, hooblerLutTex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
+	// Final output of Kovalovs' LUT calculations:
+	GLuint kovalovsLutTex;
+	glGenTextures(1, &kovalovsLutTex);
+	glBindTexture(GL_TEXTURE_2D, kovalovsLutTex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, WIDTH, HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+
+	// Intermediate buffer used in Hoobler's LUT calculations:
 	GLuint scatterAccumTex;
 	glGenTextures(1, &scatterAccumTex);
 	glBindTexture(GL_TEXTURE_2D, scatterAccumTex);
@@ -134,6 +147,7 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
+	// Results after sum pass for Hoobler's LUT calculations:
 	GLuint summedLutTex;
 	glGenTextures(1, &summedLutTex);
 	glBindTexture(GL_TEXTURE_2D, summedLutTex);
@@ -267,14 +281,14 @@ int main()
 				accumLutShader.setFloat("u_quadratic", g_quadratic);
 
 				glBindImageTexture(3, scatterAccumTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				glBindImageTexture(4, lutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+				glBindImageTexture(4, hooblerLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 				glBindImageTexture(5, summedLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				//glDispatchCompute(1, HEIGHT, 1);
+				glDispatchCompute(1, HEIGHT, 1);
 
 				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 				sumLutShader.use();
-				//glDispatchCompute(1, 1, 1);
+				glDispatchCompute(1, 1, 1);
 			}
 
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -288,7 +302,7 @@ int main()
 				kovalovsLutShader.setFloat("u_linear", g_linear);
 				kovalovsLutShader.setFloat("u_quadratic", g_quadratic);
 
-				glBindImageTexture(6, lutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+				glBindImageTexture(6, kovalovsLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 				glDispatchCompute(1, HEIGHT, 1);
 			}
 
@@ -302,7 +316,8 @@ int main()
 				fullscreenShader.setFloat("u_tParam", g_noiseTParam);
 				fullscreenShader.setBool("u_renderMode", g_raymarchOrNoise);
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, lutTex);
+				g_KorH ? glBindTexture(GL_TEXTURE_2D, hooblerLutTex)
+					   : glBindTexture(GL_TEXTURE_2D, kovalovsLutTex);
 				glActiveTexture(GL_TEXTURE1);
 				glBindTexture(GL_TEXTURE_3D, noiseTex);
 				fullscreenVAO.bind();
@@ -393,6 +408,7 @@ void gui()
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::Text("Camera position: (%f, %f, %f)", g_cameraPos.x, g_cameraPos.y, g_cameraPos.z);
 	ImGui::Checkbox("Raymarching or 3D noise", &g_raymarchOrNoise);
+	ImGui::Checkbox("Kovalovs or Hoobler", &g_KorH);
 	ImGui::Checkbox("Pause time", &g_pauseTime);
 
 	// LUT data controls:
