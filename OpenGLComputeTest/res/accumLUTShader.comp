@@ -65,15 +65,15 @@ void main()
     float phase = PhaseHG(-cosPhi, u_gParam);
     float attenuation = PhongAttenuation(d);
         
-    vec3 scattering = extinction * phase * attenuation;
+    float scattering = phase * attenuation;
 
     scattering *= tRange / dim.x;
 
-	imageStore(accumBuffer, coords, vec4(scattering, 1.0));
+	imageStore(accumBuffer, coords, vec4(vec3(scattering), 1.0));
 
     barrier();
 
-    vec4 newColour;
+    vec4 newColour = vec4(1.0);
 
     for (uint d = 1; d < 32; d *= 2)
         if (coords.x >= d)

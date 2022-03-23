@@ -17,7 +17,7 @@ void main()
     for (uint t = 0; t < dim.x; ++t)
     {
         ivec2 texCoords = localCoords + ivec2(t, 0);
-        vec4 s = imageLoad(finalLUT, tc);
+        vec4 s = imageLoad(finalLUT, texCoords);
 
         vec3 v = vec3(s.rgb * s.a) /* + sOffset */;
         if (localCoords.x == (dim.x - 1))
