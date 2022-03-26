@@ -29,23 +29,6 @@ void initImGui(GLFWwindow* window);
 void processInput(GLFWwindow* window, float dt);
 void gui();
 
-bool g_pauseTime = true;
-
-// Raymarching data:
-glm::vec3 g_cameraPos(0.0f, 1.0f, 0.0f);
-glm::vec4 g_sphereData(0.0f, 1.0f, 6.0f, 1.0f);	// w-component is radius.
-
-glm::vec3 g_boxPos(-2.5f, 1.0f, 6.0f);
-glm::vec3 g_boxDim(0.5f);
-
-glm::vec3 g_torusPos(2.0f, 1.0f, 6.0f);
-glm::vec2 g_torusRadii(1.0f, 0.2f);				// x-component is circular radius, y-component is ring thickness.
-float g_kParam = 1e-2;
-
-// Noise data:
-float g_noiseTParam = 0.0f;
-float g_noiseFreq = 0.01f;
-
 // LUT data:
 glm::vec3 g_wavelengths = glm::vec3(700, 530, 440);
 float g_scatterStrength = 1.0f;
@@ -61,8 +44,8 @@ float g_constant	= 1.0f;
 float g_linear		= 0.09f;
 float g_quadratic	= 0.032f;
 
-bool g_raymarchOrNoise = false;	// 'false' = raymarching, 'true' = 3D noise.
 bool g_KorH = false;			// 'false' = output Kovalovs' LUT, 'true' = output Hoobler's LUT.
+bool g_accumOrSum = false;		// 'false' = output accum LUT, 'true' = output summed LUT.
 
 const int WIDTH = 1024, HEIGHT = 1024, DEPTH = 50;
 
@@ -76,51 +59,24 @@ int main()
 
 	std::cout << "Hello, world!\n" << glGetString(GL_VERSION) << std::endl;
 
-	Shader rayComputeShader;
-	Shader noiseComputeShader;
 	Shader fullscreenShader;
-	Shader accumLutShader;
-	Shader sumLutShader;
+	Shader hooblerAccumLutShader;
+	Shader hooblerSumLutShader;
 	Shader kovalovsLutShader;
 
-	rayComputeShader.loadShader("res/raymarchComputeShader.comp");
-	noiseComputeShader.loadShader("res/noise3DComputeShader.comp");
 	fullscreenShader.loadShader("res/fullscreenShader_vertex.vert", "res/fullscreenShader_frag.frag");
-	accumLutShader.loadShader("res/accumLUTShader.comp");
-	sumLutShader.loadShader("res/sumLUTShader.comp");
+	hooblerAccumLutShader.loadShader("res/hooblerAccumLUTShader.comp");
+	hooblerSumLutShader.loadShader("res/hooblerSumLUTShader.comp");
 	kovalovsLutShader.loadShader("res/kovalovsLUTShader.comp");
 
 	fullscreenShader.use();
-	fullscreenShader.setInt("u_rayTex", 0);
-	fullscreenShader.setInt("u_noiseTex", 1);
-	fullscreenShader.setInt("u_lutTex", 2);
+	fullscreenShader.setInt("u_lutTex", 0);
 
 #pragma region TextureSetup
-	// Create raymarching texture to be written to in compute shader:
-	GLuint rayTex;
-	glGenTextures(1, &rayTex);
-	glBindTexture(GL_TEXTURE_2D, rayTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-
-	// Create 3D noise texture to be written to in compute shader:
-	GLuint noiseTex;
-	glGenTextures(1, &noiseTex);
-	glBindTexture(GL_TEXTURE_3D, noiseTex);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB32F, WIDTH, HEIGHT, DEPTH, 0, GL_RGB, GL_FLOAT, NULL);
-
 	// Final output of Hoobler's LUT calculations:
-	GLuint hooblerLutTex;
-	glGenTextures(1, &hooblerLutTex);
-	glBindTexture(GL_TEXTURE_2D, hooblerLutTex);
+	GLuint hooblerAccumLutTex;
+	glGenTextures(1, &hooblerAccumLutTex);
+	glBindTexture(GL_TEXTURE_2D, hooblerAccumLutTex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -148,9 +104,9 @@ int main()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	// Results after sum pass for Hoobler's LUT calculations:
-	GLuint summedLutTex;
-	glGenTextures(1, &summedLutTex);
-	glBindTexture(GL_TEXTURE_2D, summedLutTex);
+	GLuint hooblerSummedLutTex;
+	glGenTextures(1, &hooblerSummedLutTex);
+	glBindTexture(GL_TEXTURE_2D, hooblerSummedLutTex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -197,8 +153,8 @@ int main()
 	float dt{}, lastFrame{};
 
 	std::string renderDebugText		= std::string("Rendering");
-	std::string rayDebugText		= std::string("Raymarching pass");
-	std::string noiseDebugText		= std::string("Noise pass");
+	std::string hooblerDebugText	= std::string("Hoobler LUT pass");
+	std::string kovalovsDebugText	= std::string("Kovalovs LUT pass");
 	std::string fullscreenDebugText = std::string("Fullscreen quad pass");
 	std::string guiDebugText		= std::string("GUI pass");
 
@@ -215,10 +171,6 @@ int main()
 		dt = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// Toggle passing of time (pauses light movement and noise scrolling):
-		if (!g_pauseTime)
-			time += dt;
-
 		processInput(window, dt);
 
 		glClearColor(1.0f, 0.5f, 0.0f, 1.0f);
@@ -227,39 +179,8 @@ int main()
 		// Rendering debug group:
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, renderDebugText.size(), renderDebugText.c_str());
 		{
-			// Raymarching debug group:
-			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, rayDebugText.size(), rayDebugText.c_str());
-			{
-				// Run raymarching compute shader:
-				rayComputeShader.use();
-				rayComputeShader.setVec3("u_cameraPos", g_cameraPos);
-				rayComputeShader.setVec4("u_sphereData", g_sphereData);
-				rayComputeShader.setVec3("u_boxPos", g_boxPos);
-				rayComputeShader.setVec3("u_boxDim", g_boxDim);
-				rayComputeShader.setVec3("u_torusPos", g_torusPos);
-				rayComputeShader.setVec2("u_torusDim", g_torusRadii);
-				rayComputeShader.setFloat("u_time", time);
-				rayComputeShader.setFloat("u_kParam", g_kParam);
-
-				glBindImageTexture(0, rayTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-				glDispatchCompute(1, HEIGHT, 1);
-			}
-			glPopDebugGroup();
-
-			 //3D noise debug group:
-			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, noiseDebugText.size(), noiseDebugText.c_str());
-			{
-				// Run noise compute shader:
-				noiseComputeShader.use();
-				noiseComputeShader.setFloat("u_freq", g_noiseFreq);
-				noiseComputeShader.setFloat("u_time", time);
-
-				glBindImageTexture(1, noiseTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-				glDispatchCompute(1, HEIGHT, DEPTH);
-			}
-			glPopDebugGroup();
-
 			// Hoobler LUT shader stuffs:
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, hooblerDebugText.size(), hooblerDebugText.c_str());
 			{
 				// Calculate scattering coefficients based on wavelengths:
 				glm::vec3 scatteringCoefficients = glm::vec3(g_scatterStrength);
@@ -267,33 +188,35 @@ int main()
 				scatteringCoefficients.y *= powf(g_wavelengthDivisor.y / g_wavelengths.y, 4);
 				scatteringCoefficients.z *= powf(g_wavelengthDivisor.z / g_wavelengths.z, 4);
 
-				accumLutShader.use();
-				accumLutShader.setVec3("u_scatteringCoefficients", scatteringCoefficients);
-				accumLutShader.setFloat("u_tau", g_tau);
-				accumLutShader.setFloat("u_distance", g_distance);
-				accumLutShader.setFloat("u_gParam", g_gParam);
+				hooblerAccumLutShader.use();
+				hooblerAccumLutShader.setVec3("u_scatteringCoefficients", scatteringCoefficients);
+				hooblerAccumLutShader.setFloat("u_tau", g_tau);
+				hooblerAccumLutShader.setFloat("u_distance", g_distance);
+				hooblerAccumLutShader.setFloat("u_gParam", g_gParam);
 
-				accumLutShader.setFloat("u_vecLength", g_vecLength);
-				accumLutShader.setFloat("u_lightZFar", g_lightZFar);
+				hooblerAccumLutShader.setFloat("u_vecLength", g_vecLength);
+				hooblerAccumLutShader.setFloat("u_lightZFar", g_lightZFar);
 
-				accumLutShader.setFloat("u_constant", g_constant);
-				accumLutShader.setFloat("u_linear", g_linear);
-				accumLutShader.setFloat("u_quadratic", g_quadratic);
+				hooblerAccumLutShader.setFloat("u_constant", g_constant);
+				hooblerAccumLutShader.setFloat("u_linear", g_linear);
+				hooblerAccumLutShader.setFloat("u_quadratic", g_quadratic);
 
 				glBindImageTexture(3, scatterAccumTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				glBindImageTexture(4, hooblerLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				glBindImageTexture(5, summedLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-				glDispatchCompute(1, HEIGHT, 1);
+				glBindImageTexture(4, hooblerAccumLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+				glBindImageTexture(5, hooblerSummedLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+				glDispatchCompute(32, 128, 1);
 
 				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-				sumLutShader.use();
-				glDispatchCompute(1, 1, 1);
+				hooblerSumLutShader.use();
+				glDispatchCompute(32, 256, 1);
 			}
+			glPopDebugGroup();
 
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			// Kovalovs LUT shader stuffs:
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, kovalovsDebugText.size(), kovalovsDebugText.c_str());
 			{
 				kovalovsLutShader.use();
 				kovalovsLutShader.setFloat("u_gParam", g_gParam);
@@ -302,9 +225,10 @@ int main()
 				kovalovsLutShader.setFloat("u_linear", g_linear);
 				kovalovsLutShader.setFloat("u_quadratic", g_quadratic);
 
-				glBindImageTexture(6, kovalovsLutTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+				glBindImageTexture(6, kovalovsLutTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
 				glDispatchCompute(1, HEIGHT, 1);
 			}
+			glPopDebugGroup();
 
 			// Block until compute operations have been completed:
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -313,13 +237,10 @@ int main()
 			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, fullscreenDebugText.size(), fullscreenDebugText.c_str());
 			{
 				fullscreenShader.use();
-				fullscreenShader.setFloat("u_tParam", g_noiseTParam);
-				fullscreenShader.setBool("u_renderMode", g_raymarchOrNoise);
 				glActiveTexture(GL_TEXTURE0);
-				g_KorH ? glBindTexture(GL_TEXTURE_2D, hooblerLutTex)
+				g_KorH ? g_accumOrSum ? glBindTexture(GL_TEXTURE_2D, hooblerAccumLutTex)
+									  : glBindTexture(GL_TEXTURE_2D, hooblerSummedLutTex)
 					   : glBindTexture(GL_TEXTURE_2D, kovalovsLutTex);
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_3D, noiseTex);
 				fullscreenVAO.bind();
 				glDrawArrays(GL_TRIANGLES, 0, 6);
 			}
@@ -387,79 +308,33 @@ void processInput(GLFWwindow* window, float dt)
 
 	const float speed = 3.0f * dt;
 
-	// Raymarching camera movement:
-	if (glfwGetKey(window, GLFW_KEY_W))
-		g_cameraPos.z += speed;
-	if (glfwGetKey(window, GLFW_KEY_A))
-		g_cameraPos.x -= speed;
-	if (glfwGetKey(window, GLFW_KEY_S))
-		g_cameraPos.z -= speed;
-	if (glfwGetKey(window, GLFW_KEY_D))
-		g_cameraPos.x += speed;
-	if (glfwGetKey(window, GLFW_KEY_R))
-		g_cameraPos.y += speed;
-	if (glfwGetKey(window, GLFW_KEY_F))
-		g_cameraPos.y -= speed;
 }
 
 void gui()
 {
 	ImGui::Begin("ImGui");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Text("Camera position: (%f, %f, %f)", g_cameraPos.x, g_cameraPos.y, g_cameraPos.z);
-	ImGui::Checkbox("Raymarching or 3D noise", &g_raymarchOrNoise);
 	ImGui::Checkbox("Kovalovs or Hoobler", &g_KorH);
-	ImGui::Checkbox("Pause time", &g_pauseTime);
+
+	if (g_KorH)
+		ImGui::Checkbox("Accumulated or summed?", &g_accumOrSum);
 
 	// LUT data controls:
-	if (ImGui::CollapsingHeader("LUT Shader controls"))
-	{
-		ImGui::Text("Calculation variables:");
-		ImGui::DragFloat3("Wavelengths", &g_wavelengths.x, 0.5f, 0.0f, 700.0f);
-		ImGui::SliderFloat("Scattering strength", &g_scatterStrength, 0.0f, 50.0f);
-		ImGui::SliderFloat("G parameter (phase)", &g_gParam, -1.0f + 0.001f, 1.0f - 0.001f);
+	ImGui::Text("");
+	ImGui::Text("Calculation variables:");
+	ImGui::DragFloat3("Wavelengths", &g_wavelengths.x, 0.5f, 0.0f, 700.0f);
+	ImGui::SliderFloat("Scattering strength", &g_scatterStrength, 0.0f, 50.0f);
+	ImGui::SliderFloat("G parameter (phase)", &g_gParam, -1.0f + 0.001f, 1.0f - 0.001f);
 
-		ImGui::Text("Hoobler data:");
-		ImGui::SliderFloat("vecLength", &g_vecLength, 0.0f, 50.0f);
-		ImGui::SliderFloat("lightZFar", &g_lightZFar, 0.0f, 50.0f);
-		ImGui::DragFloat3("Wavelength divisors", &g_wavelengthDivisor.x, 1.0f, 1.0f, 400.0f);
+	ImGui::Text("Hoobler data:");
+	ImGui::SliderFloat("vecLength", &g_vecLength, 0.0f, 50.0f);
+	ImGui::SliderFloat("lightZFar", &g_lightZFar, 0.0f, 50.0f);
+	ImGui::DragFloat3("Wavelength divisors", &g_wavelengthDivisor.x, 1.0f, 1.0f, 400.0f);
 
-		ImGui::Text("Light data:");
-		ImGui::SliderFloat("Light constant", &g_constant, 0.0f, 1.0f);
-		ImGui::SliderFloat("Light linear", &g_linear, 0.0f, 0.5f);
-		ImGui::SliderFloat("Light quadratic", &g_quadratic, 0.0f, 0.1f);
-	}
-
-	// Raymarcher controls:
-	if (!g_raymarchOrNoise) 
-	{
-		if (ImGui::CollapsingHeader("Raymarcher controls"))
-		{
-			ImGui::Text("Sphere:");
-			ImGui::SliderFloat3("Sphere position", &g_sphereData.x, -10.0f, 10.0f);
-			ImGui::SliderFloat("Sphere radius", &g_sphereData.w, 0.001f, 3.0f);
-
-			ImGui::Text("Box:");
-			ImGui::SliderFloat3("Box position", &g_boxPos.x, -10.0f, 10.0f);
-			ImGui::SliderFloat3("Box dimensions", &g_boxDim.x, 0.001f, 3.0f);
-			
-			ImGui::Text("Torus:");
-			ImGui::SliderFloat3("Torus position", &g_torusPos.x, -10.0f, 10.0f);
-			ImGui::SliderFloat2("Torus radii", &g_torusRadii.x, 0.001f, 3.0f);
-
-			ImGui::Text("");
-			ImGui::SliderFloat("Smooth minimum", &g_kParam, 0.001f, 3.0f);
-		}
-	}
-	// 3D noise controls:
-	else
-	{
-		if (ImGui::CollapsingHeader("Noise controls"))
-		{
-			ImGui::SliderFloat("Noise frequency", &g_noiseFreq, 0.001f, 0.5f);
-			ImGui::SliderFloat("Noise depth slice", &g_noiseTParam, 0.0f, 1.0f);
-		}
-	}
+	ImGui::Text("Light data:");
+	ImGui::SliderFloat("Light constant", &g_constant, 0.0f, 1.0f);
+	ImGui::SliderFloat("Light linear", &g_linear, 0.0f, 0.5f);
+	ImGui::SliderFloat("Light quadratic", &g_quadratic, 0.0f, 0.1f);
 
 	ImGui::End();
 	ImGui::Render();

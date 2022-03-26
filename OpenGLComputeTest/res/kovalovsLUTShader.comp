@@ -12,7 +12,7 @@ uniform float u_quadratic;
 
 float PhongAttenuation(float dist)
 {
-	return 1.0 / (u_constant + u_linear * dist + u_quadratic * (dist * dist));
+	return 1.0 / (u_quadratic * (dist * dist) + u_linear * dist + u_constant);
 }
 
 float PhaseHG(float theta, float g)
@@ -31,7 +31,14 @@ void main()
 
 	float dist = length(dir);
 	float att = PhongAttenuation(dist);
-	float phase = PhaseHG(dot(normalize(dir), vec2(0.0, 1.0)), u_gParam); 
+
+	float phase;
+
+	// Avoid NaN error if current pixel is centre and thus dir is zero vector:
+	if (length(dir) == 0.0)
+		phase = PhaseHG(1.0, u_gParam);
+	else
+		phase = PhaseHG(dot(normalize(dir), vec2(0.0, 1.0)), u_gParam); 
 
 	imageStore(finalLUT, coords, vec4(phase * att, 0.0, 0.0, 1.0));
 }
